@@ -16,7 +16,7 @@
 
      ### From Source
 
-     ```bash
+     ```
      git clone <repository-url>
      cd ai-hwdoctor
      go build -o doctor .

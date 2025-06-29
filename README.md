@@ -17,7 +17,7 @@ A cross-platform CLI and TUI tool for real-time hardware monitoring, log analysi
      ### From Source
 
      ```
-     git clone <repository-url>
+     git clone https://github.com/DomiGames/ai-hwdoctor.git
      cd ai-hwdoctor
      go build -o doctor .
      ```

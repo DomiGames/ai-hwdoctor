@@ -24,37 +24,40 @@ const (
     visibleLogs = 20
 )
 
+// Model represents the state of the TUI application.
 type Model struct {
-    activeTab    int
-    devices      []monitor.Device
-    logs         []monitor.LogEntry
-    events       []monitor.HardwareEvent
-    watcher      *monitor.Watcher
-    llmProvider  ai.LLMProvider
-    diagnostics  []*ai.DiagnosticResult
-    commManager  *communication.CommunicationManager
-    width        int
-    height       int
-    selectedDevice int
-    selectedLog    int
-    logScroll      int
-    deviceScroll   int
-    lastUpdate     time.Time
-    fixInProgress  bool
-    fixOutput      []string
-    currentFix     *ai.DiagnosticResult
-    confirmation   bool
-    communicationPair []monitor.Device
+    activeTab               int
+    devices                 []monitor.Device
+    logs                    []monitor.LogEntry
+    events                  []monitor.HardwareEvent
+    watcher                 *monitor.Watcher
+    llmProvider             ai.LLMProvider
+    diagnostics             []*ai.DiagnosticResult
+    commManager             *communication.CommunicationManager
+    width                   int
+    height                  int
+    selectedDevice          int
+    selectedLog             int
+    logScroll               int
+    deviceScroll            int
+    lastUpdate              time.Time
+    fixInProgress           bool
+    fixOutput               []string
+    currentFix              *ai.DiagnosticResult
+    confirmation            bool
+    communicationPair       []monitor.Device
     driverInstallInProgress bool
     driverInstallOutput     []string
-    tabStyle       lipgloss.Style
-    activeTabStyle lipgloss.Style
-    contentStyle   lipgloss.Style
-    deviceStyle    lipgloss.Style
-    logStyle       lipgloss.Style
-    headerStyle    lipgloss.Style
+    tabStyle                lipgloss.Style
+    activeTabStyle          lipgloss.Style
+    contentStyle            lipgloss.Style
+    deviceStyle             lipgloss.Style
+    logStyle                lipgloss.Style
+    headerStyle             lipgloss.Style
+    badgeStyle              lipgloss.Style
 }
 
+// Custom message types for Bubble Tea updates
 type tickMsg time.Time
 type devicesMsg []monitor.Device
 type logsMsg []monitor.LogEntry
@@ -68,6 +71,7 @@ type fixCompleteMsg struct {
 }
 type communicationResultMsg string
 
+// StartTUI initializes and runs the TUI application.
 func StartTUI(apiKey string, verbose bool) error {
     llmProvider := ai.NewLLMProvider(apiKey)
     commManager := communication.NewCommunicationManager()
@@ -102,6 +106,18 @@ func StartTUI(apiKey string, verbose bool) error {
     return err
 }
 
+// setupStyles initializes the lipgloss styles for the TUI components.
+func (m *Model) setupStyles() {
+    m.tabStyle = lipgloss.NewStyle().Padding(0, 2).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("15"))
+    m.activeTabStyle = lipgloss.NewStyle().Padding(0, 2).Background(lipgloss.Color("4")).Foreground(lipgloss.Color("15")).Bold(true)
+    m.contentStyle = lipgloss.NewStyle().Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("4"))
+    m.deviceStyle = lipgloss.NewStyle().Padding(0, 1).Margin(0, 0, 1, 0)
+    m.logStyle = lipgloss.NewStyle().Padding(0, 1)
+    m.headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4")).Padding(1, 2)
+    m.badgeStyle = lipgloss.NewStyle().Foreground(lipgloss.Color("15")).Background(lipgloss.Color("4")).Padding(0, 1).Bold(true)
+}
+
+// Init sets up initial commands for the TUI.
 func (m Model) Init() tea.Cmd {
     return tea.Batch(
         tick(),
@@ -111,6 +127,7 @@ func (m Model) Init() tea.Cmd {
     )
 }
 
+// Update handles all user interactions and message updates.
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     var cmds []tea.Cmd
 
@@ -243,6 +260,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
     return m, tea.Batch(cmds...)
 }
 
+// View renders the current state of the TUI.
 func (m Model) View() string {
     if m.width == 0 {
         return "Loading..."
@@ -256,15 +274,7 @@ func (m Model) View() string {
     return lipgloss.JoinVertical(lipgloss.Left, header, tabs, content, footer)
 }
 
-func (m *Model) setupStyles() {
-    m.tabStyle = lipgloss.NewStyle().Padding(0, 2).Background(lipgloss.Color("240")).Foreground(lipgloss.Color("15"))
-    m.activeTabStyle = lipgloss.NewStyle().Padding(0, 2).Background(lipgloss.Color("4")).Foreground(lipgloss.Color("15")).Bold(true)
-    m.contentStyle = lipgloss.NewStyle().Padding(1, 2).Border(lipgloss.RoundedBorder()).BorderForeground(lipgloss.Color("4"))
-    m.deviceStyle = lipgloss.NewStyle().Padding(0, 1).Margin(0, 0, 1, 0)
-    m.logStyle = lipgloss.NewStyle().Padding(0, 1)
-    m.headerStyle = lipgloss.NewStyle().Bold(true).Foreground(lipgloss.Color("4")).Padding(1, 2)
-}
-
+// renderHeader displays the title and status information.
 func (m Model) renderHeader() string {
     title := "AI-HWDoctor - Hardware Diagnostics"
     status := fmt.Sprintf("Last Update: %s", m.lastUpdate.Format("15:04:05"))
@@ -283,6 +293,7 @@ func (m Model) renderHeader() string {
     return header
 }
 
+// renderTabs displays the tab navigation bar.
 func (m Model) renderTabs() string {
     var tabs []string
     tabNames := []string{"1. Devices", "2. Logs", "3. AI", "4. Fix Progress"}
@@ -296,6 +307,7 @@ func (m Model) renderTabs() string {
     return lipgloss.JoinHorizontal(lipgloss.Left, tabs...)
 }
 
+// renderContent displays the content based on the active tab.
 func (m Model) renderContent() string {
     switch m.activeTab {
     case tabDevices:
@@ -311,6 +323,7 @@ func (m Model) renderContent() string {
     }
 }
 
+// renderDevicesTab shows the list of connected devices.
 func (m Model) renderDevicesTab() string {
     if len(m.devices) == 0 {
         return m.contentStyle.Width(m.width - 4).Height(m.height - 8).Render("No devices. Press 'r'")
@@ -348,6 +361,7 @@ func (m Model) renderDevicesTab() string {
     return m.contentStyle.Width(m.width - 4).Height(m.height - 8).Render(content.String())
 }
 
+// renderLogsTab displays system logs.
 func (m Model) renderLogsTab() string {
     if len(m.logs) == 0 {
         return m.contentStyle.Width(m.width - 4).Height(m.height - 8).Render("No logs. Press 'r'")
@@ -391,6 +405,7 @@ func (m Model) renderLogsTab() string {
     return m.contentStyle.Width(m.width - 4).Height(m.height - 8).Render(content.String())
 }
 
+// renderAITab shows AI diagnostic results.
 func (m Model) renderAITab() string {
     var content strings.Builder
     content.WriteString("AI Diagnostics:\n\n")
@@ -462,6 +477,7 @@ func (m Model) renderAITab() string {
     return m.contentStyle.Width(m.width - 4).Height(m.height - 8).Render(content.String())
 }
 
+// renderFixTab displays the progress of fix operations.
 func (m Model) renderFixTab() string {
     var content strings.Builder
     content.WriteString("Fix Progress:\n\n")
@@ -492,6 +508,7 @@ func (m Model) renderFixTab() string {
     return m.contentStyle.Width(m.width - 4).Height(m.height - 8).Render(content.String())
 }
 
+// renderFooter shows help text and the "Built with Bolt.new" badge.
 func (m Model) renderFooter() string {
     help := "Tab: Switch | ↑↓: Navigate | Enter: Analyze | R: Refresh"
     if m.activeTab == tabAI && len(m.diagnostics) > 0 {
@@ -501,9 +518,16 @@ func (m Model) renderFooter() string {
         help += " | C: Connect Devices"
     }
     help += " | Q: Quit"
-    return lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Padding(0, 2).Render(help)
+
+    badge := m.badgeStyle.Render("[Built with Bolt.new -> https://bolt.new/]")
+    return lipgloss.JoinHorizontal(
+        lipgloss.Left,
+        lipgloss.NewStyle().Foreground(lipgloss.Color("8")).Padding(0, 2).Render(help),
+        lipgloss.NewStyle().Align(lipgloss.Right).Width(m.width-lipgloss.Width(help)-4).Render(badge),
+    )
 }
 
+// handleUpKey moves the selection up in the active tab.
 func (m *Model) handleUpKey() {
     switch m.activeTab {
     case tabDevices:
@@ -523,6 +547,7 @@ func (m *Model) handleUpKey() {
     }
 }
 
+// handleDownKey moves the selection down in the active tab.
 func (m *Model) handleDownKey() {
     switch m.activeTab {
     case tabDevices:
@@ -542,6 +567,7 @@ func (m *Model) handleDownKey() {
     }
 }
 
+// handlePageUp scrolls up by one page in the active tab.
 func (m *Model) handlePageUp() {
     switch m.activeTab {
     case tabDevices:
@@ -557,6 +583,7 @@ func (m *Model) handlePageUp() {
     }
 }
 
+// handlePageDown scrolls down by one page in the active tab.
 func (m *Model) handlePageDown() {
     switch m.activeTab {
     case tabDevices:
@@ -574,6 +601,7 @@ func (m *Model) handlePageDown() {
     }
 }
 
+// handleEnter triggers actions based on the active tab.
 func (m *Model) handleEnter() tea.Cmd {
     switch m.activeTab {
     case tabDevices:
@@ -586,12 +614,14 @@ func (m *Model) handleEnter() tea.Cmd {
     return nil
 }
 
+// tick schedules periodic updates every 2 seconds.
 func tick() tea.Cmd {
     return tea.Tick(time.Second*2, func(t time.Time) tea.Msg {
         return tickMsg(t)
     })
 }
 
+// fetchDevices retrieves the list of connected devices.
 func (m Model) fetchDevices() tea.Cmd {
     return func() tea.Msg {
         devices, _ := monitor.ScanDevices(false)
@@ -599,6 +629,7 @@ func (m Model) fetchDevices() tea.Cmd {
     }
 }
 
+// fetchLogs retrieves recent system logs.
 func (m Model) fetchLogs() tea.Cmd {
     return func() tea.Msg {
         logs, _ := monitor.GetRecentLogs(50, "")
@@ -606,6 +637,7 @@ func (m Model) fetchLogs() tea.Cmd {
     }
 }
 
+// listenForEvents listens for hardware events from the watcher.
 func (m Model) listenForEvents() tea.Cmd {
     return func() tea.Msg {
         select {
@@ -617,6 +649,7 @@ func (m Model) listenForEvents() tea.Cmd {
     }
 }
 
+// diagnoseDevice initiates AI diagnostics for a selected device.
 func (m Model) diagnoseDevice(device monitor.Device) tea.Cmd {
     return func() tea.Msg {
         diagnostic, err := ai.DiagnoseDevice(device, m.logs, m.llmProvider)
@@ -628,6 +661,7 @@ func (m Model) diagnoseDevice(device monitor.Device) tea.Cmd {
     }
 }
 
+// analyzeLogs initiates AI analysis of system logs.
 func (m Model) analyzeLogs() tea.Cmd {
     return func() tea.Msg {
         diagnostic, err := ai.AnalyzeLogs(m.logs, m.llmProvider)
@@ -638,6 +672,7 @@ func (m Model) analyzeLogs() tea.Cmd {
     }
 }
 
+// buildCommandString constructs a command string from a list of commands.
 func buildCommandString(commands []ai.Command) string {
     var cmdParts []string
     for _, cmd := range commands {
@@ -650,6 +685,7 @@ func buildCommandString(commands []ai.Command) string {
     return strings.Join(cmdParts, " && ")
 }
 
+// openTerminalAndRun executes commands in a new terminal window.
 func openTerminalAndRun(cmdString string) error {
     switch runtime.GOOS {
     case "linux":
@@ -663,6 +699,7 @@ func openTerminalAndRun(cmdString string) error {
     }
 }
 
+// openLinuxTerminal opens a terminal on Linux to run commands.
 func openLinuxTerminal(cmdString string) error {
     terminals := []string{"x-terminal-emulator", "gnome-terminal", "konsole", "xterm"}
     for _, term := range terminals {
@@ -674,17 +711,20 @@ func openLinuxTerminal(cmdString string) error {
     return fmt.Errorf("no terminal emulator found")
 }
 
+// openMacTerminal opens a terminal on macOS to run commands.
 func openMacTerminal(cmdString string) error {
     script := fmt.Sprintf(`tell application "Terminal" to do script "%s"`, strings.ReplaceAll(cmdString, `"`, `\"`))
     cmd := exec.Command("osascript", "-e", script)
     return cmd.Start()
 }
 
+// openWindowsTerminal opens a terminal on Windows to run commands.
 func openWindowsTerminal(cmdString string) error {
     cmd := exec.Command("cmd", "/c", "start", "cmd", "/k", cmdString)
     return cmd.Start()
 }
 
+// applyFix applies a diagnostic fix by executing commands in a terminal.
 func (m Model) applyFix(diagnostic *ai.DiagnosticResult) tea.Cmd {
     return func() tea.Msg {
         if len(diagnostic.Commands) == 0 {
@@ -699,12 +739,14 @@ func (m Model) applyFix(diagnostic *ai.DiagnosticResult) tea.Cmd {
     }
 }
 
+// sendUpdate sends a message to update the TUI state.
 func (m Model) sendUpdate(msg tea.Msg) tea.Cmd {
     return func() tea.Msg {
         return msg
     }
 }
 
+// establishCommunication sets up communication between two devices.
 func (m Model) establishCommunication() tea.Cmd {
     return func() tea.Msg {
         if len(m.communicationPair) != 2 {
@@ -723,6 +765,7 @@ func (m Model) establishCommunication() tea.Cmd {
     }
 }
 
+// max returns the maximum of two integers.
 func max(a, b int) int {
     if a > b {
         return a
@@ -730,6 +773,7 @@ func max(a, b int) int {
     return b
 }
 
+// min returns the minimum of two integers.
 func min(a, b int) int {
     if a < b {
         return a

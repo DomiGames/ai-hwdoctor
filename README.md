@@ -1,11 +1,11 @@
 
-     # AI-HWDoctor
+# AI-HWDoctor
 
-     A cross-platform CLI and TUI tool for real-time hardware monitoring, log analysis, and AI-powered troubleshooting.
+A cross-platform CLI and TUI tool for real-time hardware monitoring, log analysis, and AI-powered troubleshooting.
 
-     ## Features
+## Features
 
-     - 🔍 **Real-time Hardware Monitoring**: Detect USB insertions, device connections, and hardware changes
+- 🔍 **Real-time Hardware Monitoring**: Detect USB insertions, device connections, and hardware changes
      - 📋 **System Log Analysis**: Parse and tail logs from `dmesg` and system sources
      - 🤖 **AI-Powered Diagnostics**: Get intelligent troubleshooting suggestions (offline + OpenAI)
      - 💻 **Cross-Platform**: Works on Linux, macOS, and Windows
